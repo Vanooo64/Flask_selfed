@@ -1,6 +1,8 @@
-from flask import Flask, render_template, url_for, request
+from flask import Flask, render_template, url_for, request, flash
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'tg573jz4vair8rcp8ug9'
+
 menu = [{"name": "Встановлення", "url": "install-flask"},
         {"name": "Перший додаток", "url": "first-app"},
         {"name": "Зворотній звязок", "url": "contact"}]
@@ -18,7 +20,11 @@ def about():
 @app.route("/contact", methods=['POST', 'GET'])
 def contact():
     if request.method == "POST":
-        print(request.form)
+        username = request.form.get('username')
+        if username and len(username) > 2:  # якщо користувач у полі Імя ннабрав > 2 символів
+            flash('Повідомлення відправлено', category='seccess')  # ідображаеться повідомлення
+        else:
+            flash('Помилка відправки', category='error')
 
     return render_template('contact.html', title='Зворотній звязок', menu=menu)
 
