@@ -1,26 +1,21 @@
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
-# menu = ['Встановлення', 'Перший додаток', 'Зворотній звязок']
+menu = ['Встановлення', 'Перший додаток', 'Зворотній звязок']
 
 
 @app.route("/")
 @app.route("/index")
 def index():
-    return 'index'
+    return render_template('index.html', menu=menu)
 
 
 @app.route("/about")
 def about():
-    return "<h1>Про сайт</h1>"
+    return render_template('about.html', title='Про сайт', menu=menu)
 
 
-# @app.route("/about")
-# def about():
-#     print(url_for('about'))
-#     return render_template('about.html', title='Про сайт', menu=menu)
-#
-#
+
 # with app.test_request_context(): # створює тимчасовий контекст для тестування додатку без його запуску.
 #     print(url_for('about')) #Повертає URL маршруту about (/about) і друкує його в консоль.
 
