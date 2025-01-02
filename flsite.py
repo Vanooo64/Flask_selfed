@@ -43,7 +43,7 @@ def index():
     db = get_db()
     dbase = FDataBase(db)
     menu = dbase.getMenu()
-    return render_template('index.html', menu=menu)
+    return render_template('index.html', menu=menu, posts=dbase.getPostsAnonce())
 
 @app.route('/add_post', methods=['POST', 'GET'])
 def addPost():
@@ -57,7 +57,7 @@ def addPost():
             if not res:
                 flash('Помилка додавання статі', category='error')
             else:
-                flash('Статя додана успышно', category='success')
+                flash('Статя додана успішно', category='success')
         else:
             flash('Помилка додавання статі', category='error')
 
@@ -72,7 +72,7 @@ def showPost(id_post):
     if not title:
         abort(404)
 
-    return render_template('post.html', menu=menu, titlt=title, post=post)
+    return render_template('post.html', menu=menu, title=title, post=post)
 
 if __name__ == "__main__": #перевіряє, чи скрипт виконується напряму.
     app.run(debug=True) #запускає сервер Flask у режимі розробки (включає автоматичний перезапуск і докладний відладочний вивід у випадку помилок).
