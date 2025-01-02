@@ -1,15 +1,13 @@
 import _sqlite3
 import os #Дозволяє працювати з файловою системою - формувати шляхи до файлів.
 import sqlite3
-
 from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
+from  FDataBase import FDataBase
 
 # конфігурація для БД
 DATABASE = '/tmp/flsite.db'
 DEBUG = True
 SECRET_KEY = 'tg573jz4vair8rcp8ug9'
-
-
 
 app = Flask(__name__) #створення нового додатку
 app.config.from_object(__name__) #загрузка конфігурації БД до додатку
@@ -28,17 +26,11 @@ def create_db():
         db.commit()
         db.close()
 
-
 def get_db():
     """Зеднання з БД якщо воно ще невстановлене"""
-    if not hasattr(g, 'link.db'):
+    if not hasattr(g, 'link_db'):
         g.link_db = connect_db()
     return g.link_db
-
-@app.route("/")
-def index():
-    db = get_db()
-    return render_template('index.html', menu = [])
 
 @app.teardown_appcontext # коли відбуваеться знннищення контексту додатку
 def close_db(error):
@@ -46,66 +38,48 @@ def close_db(error):
     if hasattr(g, 'link_db'):
         g.link_db.close()
 
+@app.route("/")
+def index():
+    db = get_db()
+    dbase = FDataBase(db)
+    menu = dbase.getMenu()
+    return render_template('index.html', menu=menu)
+
+@app.route('/add_post', methods=['POST', 'GET'])
+def addPost():
+    db = get_db() #підеднуеться до БД
+    dbase = FDataBase(db) #створюється єкземпляр класу
+    menu = dbase.getMenu()
+
+    if request.method == 'POST':
+        if len(request.form['name']) > 4 and len(request.form['post']) > 10:
+            res = dbase.addPost(request.form['name'], request.form['post'])
+            if not res:
+                flash('Помилка додавання статі', category='error')
+            else:
+                flash('Статя додана успышно', category='success')
+        else:
+            flash('Помилка додавання статі', category='error')
+
+    return render_template('add_post.html', menu=menu, title='Додавання статі')
+
+@app.route('/post/<int:id_post>')
+def showPost(id_post):
+    db = get_db()  # підеднуеться до БД
+    dbase = FDataBase(db)  # створюється єкземпляр класу
+    menu = dbase.getMenu()
+    title, post = dbase.getPost(id_post)
+    if not title:
+        abort(404)
+
+    return render_template('post.html', menu=menu, titlt=title, post=post)
+
+if __name__ == "__main__": #перевіряє, чи скрипт виконується напряму.
+    app.run(debug=True) #запускає сервер Flask у режимі розробки (включає автоматичний перезапуск і докладний відладочний вивід у випадку помилок).
 
 
-# menu = [{"name": "Встановлення", "url": "install-flask"},
-#         {"name": "Перший додаток", "url": "first-app"},
-#         {"name": "Зворотній звязок", "url": "contact"},
-#         {"name": "Увійти", "url": "login"}]
-
-
-# @app.route("/")
-# @app.route("/index")
-# def index():
-#     return render_template('index.html', menu=menu)
-#
-# @app.route("/about")
-# def about():
-#     return render_template('about.html', title='Про сайт', menu=menu)
-#
-# @app.route("/contact", methods=['POST', 'GET'])
-# def contact():
-#     if request.method == "POST":
-#         username = request.form.get('username')
-#         if username and len(username) > 2:  # якщо користувач у полі Імя ннабрав > 2 символів
-#             flash('Повідомлення відправлено', category='seccess')  # ідображаеться повідомлення
-#         else:
-#             flash('Помилка відправки', category='error')
-#
-#     return render_template('contact.html', title='Зворотній звязок', menu=menu)
-#
-# @app.route("/profile/<username>")
-# def profile(username):
-#     if 'userLogged' not in session or session['userLogged'] != username:
-#         abort(401)
-#     return f"Профіль корисстувача: {username}!"
-#     # return render_template('profile.html', title='Про сайт', menu=menu)
-#
-#
-# @app.route("/login", methods=["POST", "GET"])
-# def login():
-#     if 'userLogged' in session:
-#         return redirect(url_for('profile', username=session['userLogged']))
-#     elif request.method == "POST" and request.form['username'] == 'selfedu' and request.form['psw'] == '123':
-#         session['userLogged'] = request.form['username']
-#         return redirect(url_for('profile', username=session['userLogged']))
-#
-#     return render_template('login.html', title='Авторизація', menu=menu)
-#
-# @app.errorhandler(404)
-# def pageNotFount(error):
-#     return render_template('page404.html', title='Сторінка незннайдена', menu=menu), 404
-
-
-#
-# with app.test_request_context():
-#     print(url_for('index'))
-#     print(url_for('about'))
-#     print(url_for('profile', username='ivan'))
 
 
 # with app.test_request_context(): # створює тимчасовий контекст для тестування додатку без його запуску.
 #     print(url_for('about')) #Повертає URL маршруту about (/about) і друкує його в консоль.
 
-if __name__ == "__main__": #перевіряє, чи скрипт виконується напряму.
-    app.run(debug=True) #запускає сервер Flask у режимі розробки (включає автоматичний перезапуск і докладний відладочний вивід у випадку помилок).
