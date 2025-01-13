@@ -4,7 +4,7 @@ import sqlite3
 from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
 from  FDataBase import FDataBase
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager, login_user, login_required
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from UserLogin import UserLogin
 
 # конфігурація для БД
@@ -17,6 +17,10 @@ app.config.from_object(__name__) #загрузка конфігурації БД
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'flsite.db'))) #перевизначення шляху до БД
 
 login_manager = LoginManager(app) #створюємо экземпляр классу для користувачів
+login_manager.login_view = 'login' #якщо користувач неавторизованний при відвідуванні закритої сторінки він буде перенаправленинй на сторінку авторизаціії
+login_manager.login_message = "Для доступу до закритої сторінки необхідно авторизуватися"
+login_manager.login_message_category = 'success'
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -89,12 +93,16 @@ def showPost(alias):
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
+
     if request.method == "POST":
         user = dbase.getUserByEmail(request.form['email'])
         if user and check_password_hash(user['password'], request.form['password']):
             userlogin = UserLogin().create(user)
-            login_user(userlogin)
-            return redirect(url_for('index'))
+            rm = True if request.form.get('remainme') else False
+            login_user(userlogin, remember=rm)
+            return redirect(request.args.get("next") or url_for('profile'))
 
         flash("Неверная пара логин/пароль", "error")
 
@@ -116,6 +124,21 @@ def register():
             flash('Невірно заповненні поля', 'error')
 
     return render_template('register.html', menu=dbase.getMenu(), title='Регістраця')
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash('Ви вийшли з аккаунту', 'success')
+    return redirect(url_for('login'))
+
+@app.route("/profile")
+@login_required
+def profile():
+    return f"""<p><a href="{url_for('logout')}">Вийти з профіля</a>
+                    <p>user info: {current_user.get_id()}"""
+
 
 if __name__ == "__main__": #перевіряє, чи скрипт виконується напряму.
     app.run(debug=True) #запускає сервер Flask у режимі розробки (включає автоматичний перезапуск і докладний відладочний вивід у випадку помилок).
