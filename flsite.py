@@ -4,6 +4,8 @@ import sqlite3
 from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
 from  FDataBase import FDataBase
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required
+from UserLogin import UserLogin
 
 # конфігурація для БД
 DATABASE = '/tmp/flsite.db'
@@ -13,6 +15,14 @@ SECRET_KEY = 'tg573jz4vair8rcp8ug9'
 app = Flask(__name__) #створення нового додатку
 app.config.from_object(__name__) #загрузка конфігурації БД до додатку
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'flsite.db'))) #перевизначення шляху до БД
+
+login_manager = LoginManager(app) #створюємо экземпляр классу для користувачів
+
+@login_manager.user_loader
+def load_user(user_id):
+    print("load_user")
+    return UserLogin().fromDB(user_id, dbase)
+
 
 def connect_db():
     conn = sqlite3.connect(app.config['DATABASE']) #підключення БД
@@ -54,7 +64,6 @@ def index():
 
 @app.route('/add_post', methods=['POST', 'GET'])
 def addPost():
-    menu = dbase.getMenu()
 
     if request.method == 'POST':
         if len(request.form['name']) > 4 and len(request.form['post']) > 10:
@@ -66,20 +75,30 @@ def addPost():
         else:
             flash('Помилка додавання статі', category='error')
 
-    return render_template('add_post.html', menu=menu, title='Додавання статі')
+    return render_template('add_post.html', menu=dbase.getMenu(), title='Додавання статі')
 
-@app.route('/post/<alias>')
+
+@app.route("/post/<alias>")
+@login_required
 def showPost(alias):
-    menu = dbase.getMenu()
     title, post = dbase.getPost(alias)
     if not title:
         abort(404)
 
-    return render_template('post.html', menu=menu, title=title, post=post)
+    return render_template('post.html', menu=dbase.getMenu(), title=title, post=post)
 
-@app.route("/login")
+@app.route("/login", methods=["POST", "GET"])
 def login():
-    return render_template('login.html', menu=dbase.getMenu(), title='Авторизація')
+    if request.method == "POST":
+        user = dbase.getUserByEmail(request.form['email'])
+        if user and check_password_hash(user['password'], request.form['password']):
+            userlogin = UserLogin().create(user)
+            login_user(userlogin)
+            return redirect(url_for('index'))
+
+        flash("Неверная пара логин/пароль", "error")
+
+    return render_template("login.html", menu=dbase.getMenu(), title="Авторизация")
 
 @app.route("/register", methods=['POST', 'GET'])
 def register():
