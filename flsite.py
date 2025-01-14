@@ -1,16 +1,18 @@
 import _sqlite3
 import os #Дозволяє працювати з файловою системою - формувати шляхи до файлів.
 import sqlite3
-from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
+from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g, make_response
 from  FDataBase import FDataBase
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from UserLogin import UserLogin
 
+
 # конфігурація для БД
 DATABASE = '/tmp/flsite.db'
 DEBUG = True
 SECRET_KEY = 'tg573jz4vair8rcp8ug9'
+MAX_CONTENT_LENGTH = 1024 * 1024 # мах обєм файлу який можна загрузити на сайт
 
 app = Flask(__name__) #створення нового додатку
 app.config.from_object(__name__) #загрузка конфігурації БД до додатку
@@ -136,8 +138,38 @@ def logout():
 @app.route("/profile")
 @login_required
 def profile():
-    return f"""<p><a href="{url_for('logout')}">Вийти з профіля</a>
-                    <p>user info: {current_user.get_id()}"""
+    return render_template('profile.html', menu=dbase.getMenu(), title='Профіль')
+
+@app.route('/userava')
+@login_required
+def userava():
+    img = current_user.getAvatar(app)
+    if not img:
+        return ""
+
+    h = make_response(img)
+    h.headers['Content-Type'] = 'image/png'
+    return h
+
+
+@app.route('/upload', methods=["POST", "GET"])
+@login_required
+def upload():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and current_user.verifyExt(file.filename): #verifyExt перевіряє що файл PNG
+            try:
+                img = file.read()
+                res = dbase.updateUserAvatar(img, current_user.get_id())
+                if not res:
+                    flash("Помилка оновлення аватара", "error")
+                flash("Аватар оновлено", "success")
+            except FileNotFoundError as e:
+                flash("Помилка читання файлу", "error")
+        else:
+            flash("Помилка оновлення аватара", "error")
+
+    return redirect(url_for('profile'))
 
 
 if __name__ == "__main__": #перевіряє, чи скрипт виконується напряму.
