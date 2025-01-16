@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from UserLogin import UserLogin
 from forms import LoginForm, RegisterForm
+from admin.admin import admin
 
 # конфігурація для БД
 DATABASE = '/tmp/flsite.db'
@@ -16,6 +17,7 @@ MAX_CONTENT_LENGTH = 1024 * 1024 # мах обєм файлу який можн�
 app = Flask(__name__) #створення нового додатку
 app.config.from_object(__name__) #загрузка конфігурації БД до додатку
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'flsite.db'))) #перевизначення шляху до БД
+app.register_blueprint(admin, url_prefix='/admin')
 
 login_manager = LoginManager(app) #створюємо экземпляр классу для користувачів
 login_manager.login_view = 'login' #якщо користувач неавторизованний при відвідуванні закритої сторінки він буде перенаправленинй на сторінку авторизаціії
