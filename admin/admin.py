@@ -20,14 +20,14 @@ menu = [{'url': '.index', 'title': 'Панель'},
 
 @admin.route('/')
 def index():
-    if isLogged():
+    if not isLogged():  # Якщо користувач не авторизований
         return redirect(url_for('.login'))
 
     return render_template('admin/index.html', menu=menu, title='Адмін-панель')
 
 @admin.route('/login', methods=["POST", "GET"])
 def login():
-    if isLogged():
+    if isLogged():  # Якщо користувач вже авторизований
         return redirect(url_for('.index'))
 
     if request.method == "POST":
@@ -42,9 +42,9 @@ def login():
 
 @admin.route('/logout', methods=["POST", "GET"])
 def logout():
-    if not isLogged():
+    if not isLogged():  # Якщо користувач не авторизований
         return redirect(url_for('.login'))
 
-    logout_admin()
-
+    logout_admin()  # Вихід із системи
     return redirect(url_for('.login'))
+
